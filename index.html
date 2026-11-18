@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SSE REFERRAL AUDITS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+:root{
+  --navy:#0b2447; --navy-2:#19376d; --blue:#3d5af1; --sky:#e8f0fc; --head:#eaf1fb; --head-2:#d3e2f6;
+  --bg:#eef1f7; --card:#fff; --line:#e3e8f0; --text:#1b2433; --muted:#6a7588;
+  --gold:#f2b705; --gold-soft:#fff6d6; --bad:#b42318;
+  --radius:12px; --shadow:0 1px 2px rgba(11,36,71,.05),0 6px 18px rgba(11,36,71,.06);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{font-family:'Inter',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--text);font-size:13.5px;line-height:1.45;-webkit-font-smoothing:antialiased}
+
+/* top bar */
+header.top{background:linear-gradient(120deg,var(--navy),var(--navy-2));color:#fff;padding:14px 28px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;border-bottom:3px solid var(--gold)}
+.brand{display:flex;align-items:center;gap:12px}
+.logo{width:34px;height:34px;border-radius:9px;background:var(--gold);display:grid;place-items:center;color:var(--navy);font-weight:800;font-size:15px}
+h1{margin:0;font-size:20px;font-weight:800;letter-spacing:.06em}
+.sub{font-size:11px;color:#c3d1ec;letter-spacing:.04em}
+.refresh-box{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.last-refresh{font-size:12px;color:#c3d1ec}
+.btn{font-family:inherit;font-size:12.5px;font-weight:600;border-radius:8px;border:1px solid transparent;padding:8px 14px;cursor:pointer;transition:.15s}
+.btn-gold{background:var(--gold);color:#241a00}
+.btn-gold:hover{background:#ffc928}
+.btn-ghost{background:transparent;color:#fff;border-color:rgba(255,255,255,.4)}
+.btn-ghost:hover{background:rgba(255,255,255,.12)}
+.btn-light{background:#fff;color:var(--navy);border-color:var(--line)}
+.btn-light:hover{background:var(--sky)}
+.btn[disabled]{opacity:.55;cursor:not-allowed}
+
+/* filter bar */
+.filterbar{position:sticky;top:0;z-index:20;background:#fff;border-bottom:1px solid var(--line);box-shadow:0 2px 10px rgba(11,36,71,.06);padding:10px 28px}
+.filters{max-width:1560px;margin:0 auto;display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end}
+.fgroup{display:flex;flex-direction:column;gap:3px}
+.fgroup .lab{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.frange{display:flex;gap:6px;align-items:center}
+.frange span{color:var(--muted);font-size:12px}
+select,input[type=date]{font-family:inherit;font-size:13px;padding:7px 9px;border-radius:8px;border:1.5px solid var(--line);background:#fff;color:var(--text);min-width:128px;max-width:230px}
+select:focus,input:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px rgba(242,183,5,.2)}
+.active-filter{border-color:var(--gold)!important;background:var(--gold-soft)}
+
+main{max-width:1560px;margin:0 auto;padding:18px 28px 40px}
+.banner{display:none;margin:0 0 16px;padding:14px 16px;border-radius:var(--radius);border:1px solid #f1b5ae;background:#fff1f0;color:#7a1d14}
+.banner.show{display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.banner b{display:block;margin-bottom:2px}
+.banner .btn{background:var(--bad);color:#fff}
+.loading{display:none;margin:0 0 16px;padding:12px 16px;border-radius:var(--radius);background:#e8f0fe;color:var(--navy-2);font-weight:600}
+.loading.show{display:block}
+
+/* KPIs */
+.kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px;margin-bottom:6px}
+.kpi{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px 18px 14px;position:relative;overflow:hidden;border:1px solid var(--line)}
+.kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--navy)}
+.kpi.k2::before{background:var(--blue)} .kpi.k3::before{background:#0e9f6e} .kpi.k4::before{background:var(--gold)} .kpi.k5::before{background:#7c3aed}
+.kpi .k-lab{font-size:10.5px;font-weight:700;letter-spacing:.09em;color:var(--muted)}
+.kpi .k-val{font-size:34px;font-weight:800;color:var(--navy);margin-top:2px;line-height:1.15;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.kpi .k-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.kbar{height:6px;border-radius:4px;background:var(--head);margin-top:9px;overflow:hidden}
+.kbar i{display:block;height:100%;border-radius:4px;background:linear-gradient(90deg,var(--blue),#6c8cff)}
+
+.section-title{margin:26px 0 12px;font-size:13px;font-weight:800;letter-spacing:.1em;color:var(--navy);text-transform:uppercase;display:flex;align-items:center;gap:10px}
+.section-title::before{content:"";width:5px;height:18px;border-radius:3px;background:var(--gold)}
+.section-title::after{content:"";flex:1;height:1px;background:var(--head-2)}
+
+/* grid */
+.g12{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:16px;align-items:stretch}
+.c-3{grid-column:span 3}.c-4{grid-column:span 4}.c-5{grid-column:span 5}.c-6{grid-column:span 6}.c-7{grid-column:span 7}.c-8{grid-column:span 8}.c-12{grid-column:span 12}
+.stack{display:flex;flex-direction:column;gap:16px}
+.stack>.card{flex:1}
+
+.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);border:1px solid var(--line);overflow:hidden;display:flex;flex-direction:column;min-width:0}
+.card h3{margin:0;padding:12px 16px;font-size:12px;font-weight:800;letter-spacing:.07em;color:var(--navy);background:#fff;border-bottom:1px solid var(--line);text-transform:uppercase;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.card h3 small{font-weight:500;color:var(--muted);letter-spacing:0;text-transform:none;font-size:11px}
+.tscroll{overflow:auto;flex:1;max-height:440px}
+.tscroll.nomax{max-height:none}
+
+table{border-collapse:separate;border-spacing:0;width:100%;font-variant-numeric:tabular-nums}
+th,td{padding:8px 14px;border-bottom:1px solid var(--line);white-space:nowrap;font-size:13px;text-align:right;vertical-align:middle}
+th{background:var(--head);color:var(--navy);font-weight:700;font-size:11.5px;letter-spacing:.03em;position:sticky;top:0;z-index:2;border-bottom:1px solid var(--head-2)}
+th:first-child,td:first-child{text-align:left}
+td:first-child{white-space:normal;min-width:140px;font-weight:500;color:#25304a}
+tbody tr:hover td{background:#f3f7fe}
+tbody tr:last-child td{border-bottom:0}
+tr.total td{font-weight:800;background:var(--head)!important;color:var(--navy);border-top:1px solid var(--head-2);position:sticky;bottom:0}
+td.dash,.dash{color:#b3bccb}
+td.nz{font-weight:600;color:var(--navy)}
+
+/* % bar cell */
+.pb{position:relative;min-width:92px;height:22px;display:flex;align-items:center;justify-content:flex-end}
+.pb .bar{position:absolute;left:0;top:3px;bottom:3px;border-radius:4px;background:linear-gradient(90deg,#c9dcfb,#dfeafd)}
+.pb .pv{position:relative;font-weight:600;padding-right:2px}
+th.w-num{width:84px}
+th.w-pct{width:118px}
+
+/* status movement */
+.sm-wrap .tscroll{max-height:none;overflow-x:auto}
+.sm-wrap table th,.sm-wrap table td{padding:9px 13px}
+.sm-wrap th.grp{background:var(--head-2);text-align:center;font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-left:1px solid #fff}
+.sm-wrap th.vsep,.sm-wrap td.vsep{border-left:2px solid var(--head-2)}
+.sm-wrap thead tr:nth-child(2) th{top:34px}
+.sm-wrap th:first-child,.sm-wrap td:first-child{position:sticky;left:0;z-index:3;background:var(--head);box-shadow:2px 0 0 var(--head-2)}
+.sm-wrap tbody td:first-child{background:#fff;z-index:1;font-weight:700;color:var(--navy)}
+.sm-wrap tr.total td:first-child{background:var(--head)}
+.sm-wrap td.heat{font-weight:600;color:#12214a}
+.note{font-size:11.5px;color:var(--muted);padding:10px 16px;border-top:1px solid var(--line);background:#fafbfd}
+
+footer{max-width:1560px;margin:0 auto;padding:0 28px 30px;color:var(--muted);font-size:12px}
+footer details{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:10px 14px}
+footer summary{cursor:pointer;font-weight:600;color:var(--navy)}
+footer li{margin:4px 0}
+
+@media (max-width:1200px){.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}.c-3,.c-4,.c-5,.c-7,.c-8{grid-column:span 6}}
+@media (max-width:760px){
+  header.top{padding:12px 14px}
+  .filterbar{padding:10px 14px;position:static}
+  main{padding:14px 12px 30px}
+  .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .kpi .k-val{font-size:26px}
+  .g12>*{grid-column:span 12!important}
+  .fgroup,.frange{width:100%}
+  .frange input,.fgroup select{flex:1;min-width:0;max-width:none;width:100%}
+  th,td{padding:7px 10px;font-size:12px}
+}
+
+/* login overlay (built into this file) */
+#loginGate{position:fixed;inset:0;z-index:1000;display:none;align-items:center;justify-content:center;padding:20px;background:linear-gradient(135deg,var(--navy),var(--navy-2))}
+.lbox{width:100%;max-width:400px;background:#fff;border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.28);overflow:hidden}
+.lhead{background:var(--navy);color:#fff;padding:22px 26px;border-bottom:4px solid var(--gold)}
+.lhead h2{margin:0;font-size:20px;font-weight:800;letter-spacing:.05em}
+.lhead p{margin:4px 0 0;font-size:12px;color:#c9d6ee}
+#loginForm{padding:26px}
+#loginForm label{display:block;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin:0 0 6px}
+#loginForm .field{margin-bottom:18px}
+#loginForm input{width:100%;font-family:inherit;font-size:15px;padding:11px 12px;border:2px solid var(--line);border-radius:8px;color:var(--text)}
+#loginForm input:focus{outline:none;border-color:var(--gold);background:#fff9e0}
+#loginErr{display:none;margin:0 0 16px;padding:10px 12px;border-radius:8px;background:#fff1f0;border:1px solid #f1b5ae;color:#7a1d14;font-size:13px}
+#loginForm .go{width:100%;font-family:inherit;font-size:15px;font-weight:700;padding:12px;border:0;border-radius:8px;background:var(--navy);color:#fff;cursor:pointer}
+#loginForm .go:hover{background:var(--navy-2)}
+</style>
+</head>
+<body>
+
+<div id="loginGate">
+  <div class="lbox">
+    <div class="lhead"><h2>SSE REFERRAL AUDITS</h2><p>Please sign in to view the dashboard</p></div>
+    <form id="loginForm" autocomplete="off">
+      <div id="loginErr" role="alert">Incorrect username or password.</div>
+      <div class="field"><label for="lu">Username</label><input id="lu" type="text" autocomplete="username" required></div>
+      <div class="field"><label for="lp">Password</label><input id="lp" type="password" autocomplete="current-password" required></div>
+      <button class="go" type="submit">Sign in</button>
+    </form>
+  </div>
+</div>
+
+<header class="top">
+  <div class="brand">
+    <div class="logo">SS</div>
+    <div><h1>SSE REFERRAL AUDITS</h1><div class="sub">SolarSquare &middot; Referral call audit performance</div></div>
+  </div>
+  <div class="refresh-box">
+    <span class="last-refresh" id="lastRefresh">Not loaded yet</span>
+    <button class="btn btn-gold" id="btnRefresh" type="button">&#8635; Refresh Data</button>
+    <button class="btn btn-ghost" id="btnLogout" type="button">Log out</button>
+  </div>
+</header>
+
+<div class="filterbar">
+  <div class="filters">
+    <div class="fgroup">
+      <span class="lab">Cluster</span>
+      <select id="fCluster"><option value="__all__">All Clusters</option></select>
+    </div>
+    <div class="fgroup">
+      <span class="lab">Contact Timestamp</span>
+      <div class="frange"><input type="date" id="fContactFrom" aria-label="Contact Timestamp from"><span>to</span><input type="date" id="fContactTo" aria-label="Contact Timestamp to"></div>
+    </div>
+    <div class="fgroup">
+      <span class="lab">Creation Date</span>
+      <div class="frange"><input type="date" id="fCreationFrom" aria-label="Creation date from"><span>to</span><input type="date" id="fCreationTo" aria-label="Creation date to"></div>
+    </div>
+    <div class="fgroup">
+      <span class="lab">&nbsp;</span>
+      <button class="btn btn-light" id="btnClear" type="button">Clear Filters</button>
+    </div>
+  </div>
+</div>
+
+<main>
+  <div class="banner" id="errorBanner" role="alert">
+    <div><b id="errTitle">Could not load data</b><span id="errMsg"></span></div>
+    <button class="btn" id="btnRetry" type="button">Retry</button>
+  </div>
+  <div class="loading" id="loading">Loading latest data&hellip;</div>
+
+  <section class="kpis" id="kpis"></section>
+
+  <div class="section-title">Overview</div>
+  <section class="g12" id="mainGrid"></section>
+
+  <div class="section-title">Status Movement</div>
+  <section id="statusSection"></section>
+
+  <div class="section-title">Stage-wise Funnel</div>
+  <section id="stageSection"></section>
+
+  <div class="section-title">Primary Blockers Summary</div>
+  <section id="blockerSection"></section>
+</main>
+
+<footer>
+  <details open>
+    <summary>Data check (what the dashboard actually loaded)</summary>
+    <div id="diagBody" style="margin-top:8px;overflow:auto"></div>
+  </details>
+  <details style="margin-top:10px">
+    <summary>Calculation notes</summary>
+    <ul>
+      <li>Row counts vs. unique Lead IDs follow the original sheet formulas: Total Leads, Connect Rate numerator, Total Leads Considered and Total Connected Successfully count unique Lead IDs; everything else counts rows.</li>
+      <li>Most tables apply Cluster + Contact Timestamp filters only. Creation Date is applied only where the original formula used it (Connect Rate, Call Outcome list, Total Leads Considered; Total Connected Successfully uses the lower bound only).</li>
+      <li>Matching of Yes/No and text values is case-insensitive and ignores surrounding spaces.</li>
+      <li>Primary Blockers use substring matching (like SEARCH()); a cell with several blockers counts once under each blocker, so the Total row is a sum of blocker mentions.</li>
+      <li>Aggregated figures only &mdash; no customer-level data is displayed.</li>
+    </ul>
+  </details>
+</footer>
+
+<script>
+(function(){
+'use strict';
+
+/* =====================================================================
+   CONFIGURATION
+   ===================================================================== */
+var CONFIG = {
+  csvUrl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTT5FGR4SDz0Uap7SitAdmar9sm6pebzy3j6uvr0VSb3JjBtipGCUX8AUo1u4qlrnrnMfkbnnbxzeNw/pub?gid=0&single=true&output=csv',
+
+  /* Source-field settings (column LETTERS).
+     DISCREPANCIES vs. the labels in the sheet - preserved from the original formulas on purpose:
+     - notAwareField: the original formula for "Cx NOT aware of referral" (BQL->MS metric row and the
+       "by Referral Source" table) uses column X ("Was the cx contacted by LRM"), not Y
+       ("Was the cx aware about being referred"). Change to 'Y' to correct.
+     - pivotFilterField: the "Cx Didn't Speak to the Referrer" pivot filters on column Y = No
+       (aware about being referred), not Z ("Did the cx speak to the referrer"). Change to 'Z' to correct.
+     - didntSpeakField: the BQL->MS row "Cx did NOT speak to referrer" had no formula supplied, so it uses
+       column Z (matches its label). */
+  /* Master tab (Sheet2) - used ONLY by Total Leads, exactly like the original formula
+     =ROWS(FILTER(Master!B4:B, B<>"", cluster match)). The tab must be published to the web as CSV
+     (same published spreadsheet, different gid). If it cannot be loaded, Total Leads falls back to
+     unique Lead IDs from the audit tab and the KPI card says so. */
+  masterCsvUrl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTT5FGR4SDz0Uap7SitAdmar9sm6pebzy3j6uvr0VSb3JjBtipGCUX8AUo1u4qlrnrnMfkbnnbxzeNw/pub?gid=1453618847&single=true&output=csv',
+  masterFirstDataRow: 4,       // formula starts at Master!B4
+
+  notAwareField: 'X',
+  pivotFilterField: 'Y',
+  pivotFunnel: null,          // e.g. 'BQL-MS' to restrict the pivot to one funnel; null = no funnel restriction (original pivot)
+  didntSpeakField: 'Z',
+
+  /* Value matching (lower-cased, trimmed) */
+  values: {
+    yes: 'yes', no: 'no',
+    wrongNumber: 'wrong number',
+    connectedAudited: 'connected - audited',
+    badExperience: ['bad'],                 // column AL
+    noShowSC: ['sc'],                       // column AF
+    noShowCx: ['customer', 'cx', 'customer side']
+  }
+};
+
+var FUNNELS = ['BQL-MS', 'MS-MD', 'MD-Order', 'Order Booking Done'];
+var ESC_FUNNELS = ['BQL-MS', 'MS-MD', 'MD-Order'];
+var STATUSES = ['Meeting', 'Connected', 'Closed - Lost', 'Closed - Won', 'Open', 'Booked', 'Closed - Cold'];
+var PRIORITY_BLOCKERS = ['pricing issue', 'document issue', 'loan /financing issue', 'exploring competitors'];
+
+/* Column letters used for per-row normalised text lookups */
+var NEEDED = ['A','C','D','K','L','O','Q','R','S','U','X','Y','Z','AA','AB','AD','AE','AF','AH','AK','AL','AM','AP','AQ','BA'];
+
+/* Header sanity checks (position -> substring that must appear in the header, lower-cased) */
+var EXPECTED_HEADERS = {
+  'A':'funnel','B':'lead id','C':'status','D':'stage','E':'cluster','G':'creation','K':'auditor',
+  'L':'call status','M':'contact timestamp','O':'duplicate','Q':'lead referral source',
+  'R':'re-engagement','U':'stage marked','AF':'no-show','AK':'order booked','BA':'current status'
+};
+
+/* =====================================================================
+   LOGIC  (pure functions - no DOM)
+   ===================================================================== */
+// ==LOGIC-START==
+var ALL = '__all__';
+
+function colIdx(letters){
+  var n = 0;
+  for (var i = 0; i < letters.length; i++) n = n * 26 + (letters.charCodeAt(i) - 64);
+  return n - 1;
+}
+function norm(v){ return (v == null ? '' : String(v)).replace(/\s+/g, ' ').trim().toLowerCase(); }
+function clean(v){ return (v == null ? '' : String(v)).replace(/\s+/g, ' ').trim(); }
+
+/* Parse a date/timestamp into a whole-day number (UTC days since epoch) - no timezone shifts. */
+function parseDay(v){
+  var s = clean(v);
+  if (!s) return null;
+  var m, y, mo, d;
+  if ((m = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(s))) { y = +m[1]; mo = +m[2]; d = +m[3]; }
+  else if ((m = /^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{2,4})/.exec(s))) { d = +m[1]; mo = +m[2]; y = +m[3]; if (y < 100) y += 2000; }
+  else {
+    var t = Date.parse(s);
+    if (isNaN(t)) return null;
+    var dt = new Date(t);
+    y = dt.getFullYear(); mo = dt.getMonth() + 1; d = dt.getDate();
+  }
+  if (mo < 1 || mo > 12 || d < 1 || d > 31) return null;
+  return Math.floor(Date.UTC(y, mo - 1, d) / 86400000);
+}
+function inputToDay(s){ return s ? parseDay(s) : null; }
+
+function validateHeaders(header){
+  var problems = [];
+  if (!header || header.length < 53) {
+    problems.push('Expected 57 columns (A to BE) but found ' + (header ? header.length : 0) + '.');
+    return problems;
+  }
+  Object.keys(EXPECTED_HEADERS).forEach(function(L){
+    var h = norm(header[colIdx(L)]);
+    if (h.indexOf(EXPECTED_HEADERS[L]) === -1) {
+      problems.push('Column ' + L + ' should contain "' + EXPECTED_HEADERS[L] + '" but is "' + clean(header[colIdx(L)]) + '".');
+    }
+  });
+  return problems;
+}
+
+/* Turn parsed CSV (array of arrays, header first) into normalised row objects + lookup lists. */
+function prepare(data){
+  var header = data[0];
+  var idx = {};
+  NEEDED.forEach(function(L){ idx[L] = colIdx(L); });
+  var iB = colIdx('B'), iE = colIdx('E'), iG = colIdx('G'), iM = colIdx('M');
+  var rows = [];
+  var clusterCount = {}, clusterLabels = {};
+  var srcLabels = {}, outLabels = {};
+  var blockerCols = ['AA','AE','AQ'];
+  var tokenCount = {}, tokenLabels = {};
+  var leadMax = {};   // latest Contact Timestamp per Lead ID over ALL rows (like MAXIFS in the original)
+
+  for (var i = 1; i < data.length; i++) {
+    var r = data[i];
+    if (!r) continue;
+    var any = false;
+    for (var k = 0; k < r.length; k++) { if (r[k] != null && String(r[k]).trim() !== '') { any = true; break; } }
+    if (!any) continue;
+
+    var o = { n: {} };
+    for (var j = 0; j < NEEDED.length; j++) o.n[NEEDED[j]] = norm(r[idx[NEEDED[j]]]);
+    o.lead = norm(r[iB]);
+    o.cluster = norm(r[iE]);
+    var cl = clean(r[iE]);
+    if (o.cluster) {
+      clusterCount[o.cluster] = (clusterCount[o.cluster] || 0) + 1;
+      (clusterLabels[o.cluster] = clusterLabels[o.cluster] || {})[cl] = (clusterLabels[o.cluster][cl] || 0) + 1;
+    }
+    o.creation = parseDay(r[iG]);
+    o.contact = parseDay(r[iM]);
+    if (o.lead && o.contact != null && (leadMax[o.lead] == null || o.contact > leadMax[o.lead])) leadMax[o.lead] = o.contact;
+    o.stageLabel = clean(r[idx['D']]);
+    o.src = o.n['Q'];
+    if (o.src) { var sl = clean(r[idx['Q']]); (srcLabels[o.src] = srcLabels[o.src] || {})[sl] = (srcLabels[o.src][sl] || 0) + 1; }
+    if (o.n['L']) { var ol = clean(r[idx['L']]); (outLabels[o.n['L']] = outLabels[o.n['L']] || {})[ol] = (outLabels[o.n['L']][ol] || 0) + 1; }
+
+    for (var b = 0; b < blockerCols.length; b++) {
+      var raw = clean(r[idx[blockerCols[b]]]);
+      if (!raw) continue;
+      raw.split(',').forEach(function(t){
+        var lab = clean(t), key = lab.toLowerCase();
+        if (!key) return;
+        tokenCount[key] = (tokenCount[key] || 0) + 1;
+        (tokenLabels[key] = tokenLabels[key] || {})[lab] = (tokenLabels[key][lab] || 0) + 1;
+      });
+    }
+    rows.push(o);
+  }
+
+  function best(map){ var bk = null, bv = -1; Object.keys(map).forEach(function(k){ if (map[k] > bv) { bv = map[k]; bk = k; } }); return bk; }
+
+  var clusters = Object.keys(clusterCount).map(function(k){ return { key: k, label: best(clusterLabels[k]), count: clusterCount[k] }; });
+  var blockers = Object.keys(tokenCount).map(function(k){ return { key: k, label: best(tokenLabels[k]), count: tokenCount[k] }; });
+  blockers.sort(function(a, b){
+    var pa = PRIORITY_BLOCKERS.indexOf(a.key), pb = PRIORITY_BLOCKERS.indexOf(b.key);
+    if (pa !== -1 || pb !== -1) { if (pa === -1) return 1; if (pb === -1) return -1; return pa - pb; }
+    return b.count - a.count || (a.key < b.key ? -1 : 1);
+  });
+  // make sure the four headline blockers always appear, even with zero data
+  PRIORITY_BLOCKERS.forEach(function(p){
+    if (!blockers.some(function(x){ return x.key === p; })) blockers.unshift({ key: p, label: p.charAt(0).toUpperCase() + p.slice(1), count: 0 });
+  });
+  blockers.sort(function(a, b){
+    var pa = PRIORITY_BLOCKERS.indexOf(a.key), pb = PRIORITY_BLOCKERS.indexOf(b.key);
+    if (pa !== -1 || pb !== -1) { if (pa === -1) return 1; if (pb === -1) return -1; return pa - pb; }
+    return b.count - a.count || (a.key < b.key ? -1 : 1);
+  });
+
+  var srcDisplay = {}; Object.keys(srcLabels).forEach(function(k){ srcDisplay[k] = best(srcLabels[k]); });
+  var outDisplay = {}; Object.keys(outLabels).forEach(function(k){ outDisplay[k] = best(outLabels[k]); });
+
+  return { rows: rows, clusters: clusters, blockers: blockers, srcDisplay: srcDisplay, outDisplay: outDisplay, leadMax: leadMax, master: null };
+}
+
+function inRange(d, from, to){
+  if (from == null && to == null) return true;
+  if (d == null) return false;
+  if (from != null && d < from) return false;
+  if (to != null && d > to) return false;
+  return true;
+}
+function inc(map, key, by){ map[key] = (map[key] || 0) + (by == null ? 1 : by); }
+function sum(arr){ var t = 0; for (var i = 0; i < arr.length; i++) t += arr[i]; return t; }
+
+/* Single pass over the data computing every KPI / table. f = {cluster, cFrom, cTo, rFrom, rTo} */
+function compute(ds, f){
+  var V = CONFIG.values;
+  var fNotAware = CONFIG.notAwareField, fPivot = CONFIG.pivotFilterField, fSpeak = CONFIG.didntSpeakField;
+  var pivotFunnel = CONFIG.pivotFunnel ? norm(CONFIG.pivotFunnel) : null;
+  var funnelKeys = FUNNELS.map(norm);
+  var statKeys = STATUSES.map(norm);
+  var statPos = {}; statKeys.forEach(function(k, i){ statPos[k] = i; });
+
+  var R = {
+    totalLeadsSet: {}, assigned: 0, contacted: 0, connectedLeads: {},
+    fAssigned: {}, fContacted: {}, outcomes: {}, outcomeList: {}, escByFunnel: {},
+    srcWrong: {}, srcDup: {}, stageWrong: {}, stageLabels: {},
+    move: statKeys.map(function(){ return statKeys.map(function(){ return 0; }); }),
+    sConnected: statKeys.map(function(){ return {}; }),
+    sEsc: statKeys.map(function(){ return 0; }),
+    sAddr: statKeys.map(function(){ return 0; }),
+    consSets: statKeys.map(function(){ return {}; }),
+    bql: { contacted: 0, notAware: 0, didntSpeak: 0, stageWrong: 0, interested: 0, esc: 0, dup: 0 },
+    notAwareBySrc: {}, pivot: {},
+    msmd: { contacted: 0, mdNotMarked: 0, nsSC: 0, nsCx: 0, noReminder: 0, dup: 0, stageWrong: 0, esc: 0, wrong: 0 },
+    mdo: { contacted: 0, bad: 0, doubts: 0, dmNot: 0, wrong: 0, dup: 0, esc: 0, booked: 0 },
+    blockerCounts: ds.blockers.map(function(){ return [0, 0, 0]; })
+  };
+
+  var rows = ds.rows, blockers = ds.blockers;
+  var cAll = f.cluster === ALL;
+
+  for (var i = 0; i < rows.length; i++) {
+    var o = rows[i], n = o.n;
+    if (!cAll && o.cluster !== f.cluster) continue;
+    if (o.lead) R.totalLeadsSet[o.lead] = 1;                       // Total Leads: cluster filter only
+
+    var contactOK = inRange(o.contact, f.cFrom, f.cTo);
+    var creationOK = inRange(o.creation, f.rFrom, f.rTo);
+    var hasK = n['K'] !== '', hasL = n['L'] !== '';
+    var fun = n['A'];
+    var fi = funnelKeys.indexOf(fun);
+    var statusFrom = statPos[n['C']];                              // index of From status (C) or undefined
+
+    // ---- rows that need the full filter set (cluster + contact + creation) ----
+    if (contactOK && creationOK && o.lead && hasL) {
+      R.outcomeList[n['L']] = 1;                                   // outcome list formula
+      // Total Leads Considered: row must be the lead's overall latest Contact Timestamp record
+      // (MAXIFS over ALL rows, not only filtered ones), with Status (C) = the From status.
+      if (statusFrom !== undefined) {
+        var lm = ds.leadMax[o.lead];
+        if ((lm == null && o.contact == null) || lm === o.contact) R.consSets[statusFrom][o.lead] = 1;
+      }
+      if (n['L'] === V.connectedAudited) R.connectedLeads[o.lead] = 1;   // Connect Rate numerator
+    }
+    // Total Connected Successfully: cluster + contact + creation (both bounds, per the supplied formula)
+    if (contactOK && creationOK && o.lead && statusFrom !== undefined && n['L'] === V.connectedAudited) {
+      R.sConnected[statusFrom][o.lead] = 1;
+    }
+
+    if (!contactOK) continue;
+    // ---- everything below: cluster + contact filters ----
+
+    if (hasK) { R.assigned++; if (fi !== -1) inc(R.fAssigned, fun); }
+    if (hasL) { R.contacted++; if (fi !== -1) inc(R.fContacted, fun); inc(R.outcomes, n['L']); }
+
+    var isEsc = n['S'] === V.yes, isDup = n['O'] === V.yes, isWrong = n['L'] === V.wrongNumber;
+    if (isEsc && ESC_FUNNELS.map(norm).indexOf(fun) !== -1) inc(R.escByFunnel, fun);
+    if (o.src) {
+      if (isWrong) inc(R.srcWrong, o.src);
+      if (isDup) inc(R.srcDup, o.src);
+    }
+    if (isWrong) { var sk = o.stageLabel.toLowerCase(); inc(R.stageWrong, sk); R.stageLabels[sk] = R.stageLabels[sk] || o.stageLabel || '(blank)'; }
+
+    // status movement
+    if (statusFrom !== undefined) {
+      if (isEsc) R.sEsc[statusFrom]++;
+      if (n['R'] === V.yes) {
+        var to = statPos[n['BA']];
+        if (to !== undefined && to !== statusFrom) R.move[statusFrom][to]++;
+        // Escalations Addressed: BA not blank and different from C (as in the original formula)
+        if (n['BA'] !== '' && n['BA'] !== n['C']) R.sAddr[statusFrom]++;
+      }
+    }
+
+    // pivot: Cx didn't speak to the referrer
+    if (o.src && n[fPivot] === V.no && (!pivotFunnel || fun === pivotFunnel)) inc(R.pivot, o.src);
+
+    // stage-wise funnel tables
+    if (fun === 'bql-ms') {
+      var B = R.bql;
+      if (hasK) B.contacted++;
+      if (n[fNotAware] === V.no) { B.notAware++; if (o.src) inc(R.notAwareBySrc, o.src); }
+      if (n[fSpeak] === V.no) B.didntSpeak++;
+      if (n['U'] === V.no) B.stageWrong++;
+      if (n['AB'] === V.yes) B.interested++;
+      if (isEsc) B.esc++;
+      if (isDup) B.dup++;
+    } else if (fun === 'ms-md') {
+      var M = R.msmd;
+      if (hasL) M.contacted++;
+      if (n['AH'] === V.yes) M.mdNotMarked++;
+      if (V.noShowSC.indexOf(n['AF']) !== -1) M.nsSC++;
+      if (V.noShowCx.indexOf(n['AF']) !== -1) M.nsCx++;
+      if (n['AD'] === V.no) M.noReminder++;
+      if (isDup) M.dup++;
+      if (n['U'] === V.no) M.stageWrong++;
+      if (isEsc) M.esc++;
+      if (isWrong) M.wrong++;
+    } else if (fun === 'md-order') {
+      var D = R.mdo;
+      if (hasK) D.contacted++;
+      if (V.badExperience.indexOf(n['AL']) !== -1) D.bad++;
+      if (n['AM'] === V.no) D.doubts++;
+      if (n['AP'] === V.no) D.dmNot++;
+      if (isWrong) D.wrong++;
+      if (isDup) D.dup++;
+      if (isEsc) D.esc++;
+      if (n['AK'] === V.yes) D.booked++;
+    }
+
+    // primary blockers (columns AA / AE / AQ), substring match, once per blocker per row
+    var cols = [n['AA'], n['AE'], n['AQ']];
+    for (var c = 0; c < 3; c++) {
+      var cell = cols[c];
+      if (!cell) continue;
+      for (var b = 0; b < blockers.length; b++) {
+        if (cell.indexOf(blockers[b].key) !== -1) R.blockerCounts[b][c]++;
+      }
+    }
+  }
+
+  // ---- derive ----
+  if (ds.master) {          // Total Leads from the Master tab: ROWS with Lead Id (B) not blank + cluster match
+    var tl = 0;
+    for (var m = 0; m < ds.master.length; m++) { if (cAll || ds.master[m].cluster === f.cluster) tl++; }
+    R.totalLeads = tl; R.totalLeadsSrc = 'master';
+  } else {
+    R.totalLeads = Object.keys(R.totalLeadsSet).length; R.totalLeadsSrc = 'audit';
+  }
+  R.connectedUnique = Object.keys(R.connectedLeads).length;
+  R.connectRate = R.contacted > 0 ? R.connectedUnique / R.contacted : null;
+  R.pctContacted = R.assigned > 0 ? R.contacted / R.assigned : null;
+
+  R.considered = R.consSets.map(function(set){ return Object.keys(set).length; });
+  R.connectedSuccess = R.sConnected.map(function(s){ return Object.keys(s).length; });
+  return R;
+}
+// ==LOGIC-END==
+
+/* =====================================================================
+   RENDERING
+   ===================================================================== */
+var state = { ds: null, filters: null, lastRefresh: null };
+var $ = function(id){ return document.getElementById(id); };
+var nf = new Intl.NumberFormat('en-IN');
+
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function num(n){ return nf.format(n); }
+function pct(n, d){ return d > 0 ? (n / d * 100).toFixed(1) + '%' : '—'; }
+function pctv(v){ return v == null ? '—' : (v * 100).toFixed(1) + '%'; }
+function numCell(n){ return n ? '<span class="nz">' + num(n) + '</span>' : '<span class="dash">0</span>'; }
+/* percentage cell with an inline bar */
+function pbar(n, d){
+  if (!(d > 0)) return '<div class="pb"><span class="pv dash">—</span></div>';
+  var p = n / d * 100;
+  return '<div class="pb"><span class="bar" style="width:' + Math.max(0, Math.min(100, p)).toFixed(1) + '%"></span><span class="pv">' + p.toFixed(1) + '%</span></div>';
+}
+
+/* head: array of strings or {t, cls}; rows: {cells:[html], total} */
+function table(head, bodyRows){
+  var h = '<table><thead><tr>' + head.map(function(x){
+    return typeof x === 'string' ? '<th>' + esc(x) + '</th>' : '<th class="' + (x.cls || '') + '">' + esc(x.t) + '</th>';
+  }).join('') + '</tr></thead><tbody>';
+  bodyRows.forEach(function(r){
+    h += '<tr' + (r.total ? ' class="total"' : '') + '>' + r.cells.map(function(c){ return '<td>' + c + '</td>'; }).join('') + '</tr>';
+  });
+  if (!bodyRows.length) h += '<tr><td colspan="' + head.length + '" style="text-align:center;color:#6a7588;padding:22px">No data for the selected filters</td></tr>';
+  return h + '</tbody></table>';
+}
+function card(title, inner, o){
+  o = o || {};
+  return '<div class="card ' + (o.cls || '') + '"><h3>' + title + '</h3><div class="tscroll' + (o.nomax ? ' nomax' : '') + '">' + inner + '</div>' + (o.note ? '<div class="note">' + o.note + '</div>' : '') + '</div>';
+}
+function metricTable(items, baseline){
+  return table(['Metric', { t: 'Count', cls: 'w-num' }, { t: '% of audited', cls: 'w-pct' }], items.map(function(it, i){
+    return { cells: [esc(it[0]), numCell(it[1]), i === 0 ? '<div class="pb"><span class="pv">' + (baseline > 0 ? '100.0%' : '—') + '</span></div>' : pbar(it[1], baseline)] };
+  }));
+}
+function ranked(map, labelFn, totalLabel){
+  var keys = Object.keys(map).sort(function(a, b){ return map[b] - map[a] || (a < b ? -1 : 1); });
+  var t = 0;
+  var rows = keys.map(function(k){ t += map[k]; return { cells: [esc(labelFn(k)), numCell(map[k])] }; });
+  if (rows.length) rows.push({ total: true, cells: [totalLabel || 'Total', num(t)] });
+  return rows;
+}
+
+function render(){
+  var ds = state.ds; if (!ds) return;
+  var R = compute(ds, state.filters);
+
+  /* KPIs */
+  $('kpis').innerHTML =
+    kpi('k1', 'TOTAL LEADS', num(R.totalLeads), R.totalLeadsSrc === 'master' ? 'Master tab \u00b7 cluster filter' : 'Master NOT loaded \u2013 audit-tab fallback (see Data check below)') +
+    kpi('k2', 'ASSIGNED', num(R.assigned), 'Rows with an auditor') +
+    kpi('k3', 'CUSTOMERS CONTACTED', num(R.contacted), 'Rows with a call outcome') +
+    kpi('k4', 'CONNECT RATE', pctv(R.connectRate), num(R.connectedUnique) + ' unique connected ÷ contacted', R.connectRate) +
+    kpi('k5', '% CONTACTED', pctv(R.pctContacted), 'Contacted ÷ assigned', R.pctContacted);
+
+  /* Funnel stage split */
+  var fRows = FUNNELS.map(function(fn){
+    var k = norm(fn);
+    return { cells: [esc(fn), numCell(R.fAssigned[k] || 0), numCell(R.fContacted[k] || 0), pbar(R.fContacted[k] || 0, R.contacted)] };
+  });
+  var tFunnel = card('Funnel Stage Split', table(['Funnel Stage', { t: 'Assigned', cls: 'w-num' }, { t: 'Contacted', cls: 'w-num' }, { t: '% of contacted', cls: 'w-pct' }], fRows), { nomax: true });
+
+  /* Escalations */
+  var totEsc = sum(ESC_FUNNELS.map(function(fn){ return R.escByFunnel[norm(fn)] || 0; }));
+  var eRows = ESC_FUNNELS.map(function(fn){
+    var c = R.escByFunnel[norm(fn)] || 0;
+    return { cells: [esc(fn), numCell(c), pbar(c, totEsc)] };
+  });
+  eRows.push({ total: true, cells: ['Total', num(totEsc), totEsc > 0 ? '100.0%' : '—'] });
+  var tEsc = card('Escalations', table(['Funnel', { t: 'Count', cls: 'w-num' }, { t: '% count', cls: 'w-pct' }], eRows), { nomax: true });
+
+  /* Call outcomes */
+  var outKeys = Object.keys(R.outcomeList);
+  Object.keys(R.outcomes).forEach(function(k){ if (outKeys.indexOf(k) === -1) outKeys.push(k); }); // never drop a valid outcome
+  outKeys.sort(function(a, b){ return (R.outcomes[b] || 0) - (R.outcomes[a] || 0) || (a < b ? -1 : 1); });
+  var oRows = outKeys.map(function(k){
+    var c = R.outcomes[k] || 0;
+    return { cells: [esc(ds.outDisplay[k] || k), numCell(c), pbar(c, R.contacted)] };
+  });
+  var tOut = card('Call Outcomes', table(['Outcome', { t: 'Count', cls: 'w-num' }, { t: '% of count', cls: 'w-pct' }], oRows), { nomax: true });
+
+  /* Wrong numbers & duplicates by referral source */
+  var srcKeys = Object.keys(ds.srcDisplay).sort(function(a, b){
+    return ((R.srcWrong[b] || 0) + (R.srcDup[b] || 0)) - ((R.srcWrong[a] || 0) + (R.srcDup[a] || 0)) || (a < b ? -1 : 1);
+  });
+  var tw = 0, td = 0;
+  var sRows = srcKeys.map(function(k){
+    var w = R.srcWrong[k] || 0, d = R.srcDup[k] || 0; tw += w; td += d;
+    return { cells: [esc(ds.srcDisplay[k]), numCell(w), numCell(d)] };
+  });
+  sRows.push({ total: true, cells: ['Total', num(tw), num(td)] });
+  var tSrc = card('Wrong Number &amp; Duplicates by Referral Source', table(['Referral Source', { t: 'Wrong Numbers', cls: 'w-pct' }, { t: 'Duplicates', cls: 'w-pct' }], sRows), { cls: 'c-7' });
+
+  /* Wrong numbers by stage */
+  var tWS = card('Wrong Numbers by Stage', table(['Stage', { t: 'Wrong Numbers', cls: 'w-pct' }], ranked(R.stageWrong, function(k){ return R.stageLabels[k]; })), { cls: 'c-5' });
+
+  $('mainGrid').innerHTML =
+    '<div class="stack c-6">' + tFunnel + tEsc + '</div>' +
+    tOut.replace('class="card ', 'class="card c-6 ') +
+    tSrc + tWS;
+
+  $('statusSection').innerHTML = renderStatus(R);
+  $('stageSection').innerHTML = renderStages(R, ds);
+  $('blockerSection').innerHTML = renderBlockers(R, ds);
+
+  renderDiag(R);
+  updateActiveFilterStyles();
+}
+
+function renderDiag(R){
+  var el = $('diagBody'); if (!el || !state.ds) return;
+  var ds = state.ds;
+  var rows = [
+    ['Audit tab rows loaded', num(ds.rows.length)],
+    ['Audit rows with Auditor (K) filled, no filters', num(ds.rows.filter(function(o){ return o.n['K'] !== ''; }).length)],
+    ['Audit rows with Call Status (L) filled, no filters', num(ds.rows.filter(function(o){ return o.n['L'] !== ''; }).length)],
+    ['Audit rows with Lead Id (B) filled', num(ds.rows.filter(function(o){ return o.lead; }).length)],
+    ['Unique Lead IDs in audit tab', num(Object.keys(ds.rows.reduce(function(m, o){ if (o.lead) m[o.lead] = 1; return m; }, {})).length)],
+    ['Master tab status', ds.master ? 'Loaded \u2013 ' + num(ds.master.length) + ' rows with Lead Id (from row ' + CONFIG.masterFirstDataRow + '), ' + num(ds.masterInfo.physicalRows) + ' lines in file' : 'NOT loaded: ' + esc(ds.masterErr || 'unknown')],
+    ['Master header cells near the top', ds.master ? esc(ds.masterInfo.headerInfo || 'none found') : '\u2013'],
+    ['Total Leads source', R.totalLeadsSrc === 'master' ? 'Master tab' : 'Audit-tab fallback'],
+    ['Active filters', esc(JSON.stringify(state.filters))]
+  ];
+  el.innerHTML = '<table><tbody>' + rows.map(function(r){ return '<tr><td>' + r[0] + '</td><td style="text-align:left">' + r[1] + '</td></tr>'; }).join('') + '</tbody></table>';
+}
+
+function kpi(cls, label, val, sub, ratio){
+  return '<div class="kpi ' + cls + '"><div class="k-lab">' + label + '</div><div class="k-val">' + val + '</div><div class="k-sub">' + esc(sub) + '</div>' +
+    (ratio != null ? '<div class="kbar"><i style="width:' + Math.max(0, Math.min(100, ratio * 100)).toFixed(1) + '%"></i></div>' : '') + '</div>';
+}
+
+function renderStatus(R){
+  var maxMove = 0;
+  STATUSES.forEach(function(a, i){ STATUSES.forEach(function(b, j){ if (i !== j && R.move[i][j] > maxMove) maxMove = R.move[i][j]; }); });
+  var h = '<div class="card sm-wrap"><div class="tscroll nomax"><table><thead>' +
+    '<tr><th rowspan="2">From / To</th><th class="grp" colspan="' + STATUSES.length + '">Moved to (Current Status)</th><th rowspan="2" class="vsep">Total moved</th>' +
+    '<th class="grp vsep" colspan="5">Lead &amp; escalation metrics</th></tr><tr>' +
+    STATUSES.map(function(s, i){ return '<th' + (i === 0 ? '' : '') + '>' + esc(s) + '</th>'; }).join('') +
+    '<th class="vsep">Total Leads Considered</th><th>Total Connected Successfully</th><th>Total Escalations</th><th>Escalation %</th><th>Escalations Addressed</th></tr></thead><tbody>';
+  var colTot = STATUSES.map(function(){ return 0; });
+  var gMoved = 0, gCons = 0, gConn = 0, gEsc = 0, gAddr = 0;
+  STATUSES.forEach(function(from, i){
+    var rowTot = 0, cells = '';
+    STATUSES.forEach(function(to, j){
+      if (i === j) { cells += '<td class="dash" style="background:#f6f7fa">–</td>'; return; }
+      var c = R.move[i][j]; rowTot += c; colTot[j] += c;
+      if (!c) { cells += '<td class="dash">–</td>'; return; }
+      var a = (0.10 + 0.55 * (maxMove ? c / maxMove : 0)).toFixed(2);
+      cells += '<td class="heat" style="background:rgba(61,90,241,' + a + ')">' + num(c) + '</td>';
+    });
+    gMoved += rowTot; gCons += R.considered[i]; gConn += R.connectedSuccess[i]; gEsc += R.sEsc[i]; gAddr += R.sAddr[i];
+    h += '<tr><td>' + esc(from) + '</td>' + cells +
+      '<td class="vsep"><b>' + num(rowTot) + '</b></td><td class="vsep">' + num(R.considered[i]) + '</td><td>' + num(R.connectedSuccess[i]) + '</td><td>' + num(R.sEsc[i]) + '</td><td>' + pct(R.sEsc[i], R.connectedSuccess[i]) + '</td><td>' + num(R.sAddr[i]) + '</td></tr>';
+  });
+  h += '<tr class="total"><td>Total moved in</td>' + colTot.map(function(c){ return '<td>' + num(c) + '</td>'; }).join('') +
+    '<td class="vsep">' + num(gMoved) + '</td><td class="vsep">' + num(gCons) + '</td><td>' + num(gConn) + '</td><td>' + num(gEsc) + '</td><td>' + pct(gEsc, gConn) + '</td><td>' + num(gAddr) + '</td></tr>';
+  h += '</tbody></table></div><div class="note">Movement = Status (C) → Current Status (BA) where Re-engagement needed (R) = Yes; darker blue = more leads. Leads Considered uses the latest Contact Timestamp record per Lead ID.</div></div>';
+  return h;
+}
+
+function renderStages(R, ds){
+  var B = R.bql, M = R.msmd, D = R.mdo;
+
+  var bqlT = card('A. BQL → MS', metricTable([
+    ['Contacted in BQL-MS', B.contacted],
+    ['Cx NOT aware of referral', B.notAware],
+    ['Cx did NOT speak to referrer', B.didntSpeak],
+    ['Stages marked incorrectly', B.stageWrong],
+    ['Cx interested to schedule', B.interested],
+    ['Escalations', B.esc],
+    ['Duplicates', B.dup]
+  ], B.contacted), { cls: 'c-4', nomax: true });
+
+  var notAwareT = card('B. Cx NOT aware of referral – by Referral Source <small>BQL-MS · field ' + esc(CONFIG.notAwareField) + '</small>',
+    table(['Referral Source', { t: 'Count', cls: 'w-num' }], ranked(R.notAwareBySrc, function(k){ return ds.srcDisplay[k] || k; })), { cls: 'c-4' });
+
+  var pivotT = card('C. Cx Didn’t Speak to the Referrer <small>filter: field ' + esc(CONFIG.pivotFilterField) + ' = No</small>',
+    table(['Lead Referral Source', { t: 'Count', cls: 'w-num' }], ranked(R.pivot, function(k){ return ds.srcDisplay[k] || k; }, 'Grand Total')), { cls: 'c-4' });
+
+  var msT = card('D. MS → MD', metricTable([
+    ['Contacted in MS-MD', M.contacted],
+    ['Meeting DONE not marked', M.mdNotMarked],
+    ['No-show: SC side', M.nsSC],
+    ['No-show: Cx side', M.nsCx],
+    ['Reminder NOT sent', M.noReminder],
+    ['Duplicate (MS-MD)', M.dup],
+    ['Stages marked incorrectly', M.stageWrong],
+    ['Escalations', M.esc],
+    ['Wrong Numbers', M.wrong]
+  ], M.contacted), { cls: 'c-6', nomax: true });
+
+  var mdT = card('E. MD → ORDER', metricTable([
+    ['Contacted in MD-Order', D.contacted],
+    ['Bad experience', D.bad],
+    ['Doubts NOT cleared', D.doubts],
+    ['DM NOT present', D.dmNot],
+    ['Wrong Number', D.wrong],
+    ['Duplicates', D.dup],
+    ['Escalations', D.esc],
+    ['Order Booked', D.booked]
+  ], D.contacted), { cls: 'c-6', nomax: true });
+
+  return '<div class="g12">' + bqlT + notAwareT + pivotT + msT + mdT + '</div>';
+}
+
+function renderBlockers(R, ds){
+  var t = [0, 0, 0], mx = 1;
+  ds.blockers.forEach(function(b, i){ R.blockerCounts[i].forEach(function(c){ if (c > mx) mx = c; }); });
+  function heat(c){ return c ? ' style="background:rgba(242,183,5,' + (0.10 + 0.5 * c / mx).toFixed(2) + ')"' : ''; }
+  var body = ds.blockers.map(function(b, i){
+    var c = R.blockerCounts[i];
+    t[0] += c[0]; t[1] += c[1]; t[2] += c[2];
+    return '<tr><td>' + esc(b.label) + '</td>' +
+      [0, 1, 2].map(function(k){ return '<td' + heat(c[k]) + '>' + (c[k] ? num(c[k]) : '<span class="dash">0</span>') + '</td>'; }).join('') +
+      '<td><b>' + num(c[0] + c[1] + c[2]) + '</b></td></tr>';
+  }).join('');
+  body += '<tr class="total"><td>Total</td><td>' + num(t[0]) + '</td><td>' + num(t[1]) + '</td><td>' + num(t[2]) + '</td><td>' + num(t[0] + t[1] + t[2]) + '</td></tr>';
+  var tbl = '<table><thead><tr><th>Primary Blockers</th><th class="w-pct">BQL-MS</th><th class="w-pct">MS-MD</th><th class="w-pct">MD-Order</th><th class="w-pct">Total</th></tr></thead><tbody>' + body + '</tbody></table>';
+  return '<div class="g12">' + card('Primary Blockers Summary <small>BQL-MS = col AA · MS-MD = col AE · MD-Order = col AQ</small>', tbl,
+    { cls: 'c-12', nomax: true, note: 'Substring match (like SEARCH). A row listing several blockers counts once under each one, so totals count blocker mentions. Darker gold = higher count.' }) + '</div>';
+}
+
+/* =====================================================================
+   FILTERS
+   ===================================================================== */
+function readFilters(){
+  var f = {
+    cluster: $('fCluster').value,
+    cFrom: inputToDay($('fContactFrom').value), cTo: inputToDay($('fContactTo').value),
+    rFrom: inputToDay($('fCreationFrom').value), rTo: inputToDay($('fCreationTo').value)
+  };
+  state.filters = f;
+}
+function updateActiveFilterStyles(){
+  [['fCluster', $('fCluster').value !== ALL], ['fContactFrom', !!$('fContactFrom').value], ['fContactTo', !!$('fContactTo').value],
+   ['fCreationFrom', !!$('fCreationFrom').value], ['fCreationTo', !!$('fCreationTo').value]].forEach(function(p){
+    $(p[0]).classList.toggle('active-filter', p[1]);
+  });
+}
+function onFilterChange(){ readFilters(); render(); }
+function clearFilters(){
+  $('fCluster').value = ALL;
+  ['fContactFrom','fContactTo','fCreationFrom','fCreationTo'].forEach(function(id){ $(id).value = ''; });
+  onFilterChange();
+}
+function populateClusters(ds){
+  var keep = $('fCluster').value;
+  var sel = $('fCluster');
+  var main = ds.clusters.filter(function(c){ return c.count >= 50; }).sort(function(a, b){ return b.count - a.count; });
+  var rest = ds.clusters.filter(function(c){ return c.count < 50; }).sort(function(a, b){ return a.label.localeCompare(b.label); });
+  function opts(list){ return list.map(function(c){ return '<option value="' + esc(c.key) + '">' + esc(c.label) + '</option>'; }).join(''); }
+  sel.innerHTML = '<option value="' + ALL + '">All Clusters</option>' +
+    (main.length ? '<optgroup label="Main clusters (by volume)">' + opts(main) + '</optgroup>' : '') +
+    (rest.length ? '<optgroup label="Other values (A–Z)">' + opts(rest) + '</optgroup>' : '');
+  sel.value = ds.clusters.some(function(c){ return c.key === keep; }) ? keep : ALL;
+}
+
+/* =====================================================================
+   DATA LOADING
+   ===================================================================== */
+function showError(title, msg){
+  $('errTitle').textContent = title;
+  $('errMsg').textContent = msg;
+  $('errorBanner').classList.add('show');
+}
+function hideError(){ $('errorBanner').classList.remove('show'); }
+
+function loadMaster(){
+  var url = CONFIG.masterCsvUrl + (CONFIG.masterCsvUrl.indexOf('?') === -1 ? '?' : '&') + '_cb=' + Date.now();
+  return fetch(url, { cache: 'no-store' })
+    .then(function(res){ if (!res.ok) throw new Error('HTTP ' + res.status + ' - is the Master tab published to the web as CSV?'); return res.text(); })
+    .then(function(text){
+      if (/^\s*<(!doctype|html)/i.test(text)) throw new Error('received a web page instead of CSV - Master tab not published, or wrong link');
+      // Do NOT skip blank lines: the original formula starts at Master!B4, so physical row numbers matter.
+      var d = Papa.parse(text, { skipEmptyLines: false }).data;
+      var out = [], start = CONFIG.masterFirstDataRow - 1;
+      for (var r = start; r < d.length; r++) {
+        var lead = norm(d[r] && d[r][1]);
+        if (lead) out.push({ lead: lead, cluster: norm(d[r][4]) });
+      }
+      if (!out.length) throw new Error('no Lead Id values found in column B from row ' + CONFIG.masterFirstDataRow + ' (check the tab layout)');
+      var hdr = [];
+      for (var h = 0; h < Math.min(start + 1, d.length); h++) { if (d[h] && (clean(d[h][1]) || clean(d[h][4]))) hdr.push('row ' + (h + 1) + ': B="' + clean(d[h][1]).slice(0, 30) + '", E="' + clean(d[h][4]).slice(0, 30) + '"'); }
+      return { rows: out, physicalRows: d.length, headerInfo: hdr.join(' | ') };
+    });
+}
+
+function loadData(){
+  hideError();
+  $('loading').classList.add('show');
+  $('btnRefresh').disabled = true;
+  var url = CONFIG.csvUrl + (CONFIG.csvUrl.indexOf('?') === -1 ? '?' : '&') + '_cb=' + Date.now();
+
+  fetch(url, { cache: 'no-store' })
+    .then(function(res){
+      if (!res.ok) throw new Error('The server answered with HTTP ' + res.status + '. Check that the sheet is still published to the web as CSV.');
+      return res.text();
+    })
+    .then(function(text){
+      if (/^\s*<(!doctype|html)/i.test(text)) throw new Error('Received a web page instead of CSV. The sheet may no longer be published, or the link has changed.');
+      var parsed = Papa.parse(text, { skipEmptyLines: 'greedy' });
+      if (!parsed.data || !parsed.data.length) throw new Error('The CSV is empty.');
+      var problems = validateHeaders(parsed.data[0]);
+      if (problems.length) {
+        var e = new Error(problems.slice(0, 6).join(' ') + ' The sheet layout no longer matches the dashboard, so results are not shown.');
+        e.validation = true; throw e;
+      }
+      var ds = prepare(parsed.data);
+      return loadMaster().then(function(m){ ds.master = m.rows; ds.masterInfo = m; }, function(e){ ds.master = null; ds.masterErr = e && e.message; if (window.console) console.warn('Master tab not loaded:', ds.masterErr); })
+        .then(function(){
+          state.ds = ds;
+          state.lastRefresh = new Date();
+          populateClusters(ds);
+          readFilters();
+          render();
+          $('lastRefresh').textContent = 'Last refreshed: ' + state.lastRefresh.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'medium' }) + ' \u00b7 ' + num(ds.rows.length) + ' rows' + (ds.master ? ' \u00b7 ' + num(ds.master.length) + ' master leads' : '');
+        });
+    })
+    .catch(function(err){
+      var isNet = err && err.name === 'TypeError';
+      showError(err.validation ? 'Data validation error' : 'Could not load data',
+        isNet ? 'Network error - check your internet connection (or that the published CSV link is reachable), then retry.' : (err.message || String(err)));
+    })
+    .then(function(){
+      $('loading').classList.remove('show');
+      $('btnRefresh').disabled = false;
+    });
+}
+
+/* =====================================================================
+   INIT
+   ===================================================================== */
+['fCluster','fContactFrom','fContactTo','fCreationFrom','fCreationTo'].forEach(function(id){
+  $(id).addEventListener('change', onFilterChange);
+});
+$('btnClear').addEventListener('click', clearFilters);
+$('btnRefresh').addEventListener('click', loadData);
+$('btnRetry').addEventListener('click', loadData);
+/* Login (front-end gate only - demo credentials admin / admin; does not secure the public CSV) */
+var AUTH_KEY = 'sse_auth';
+function isAuthed(){ try { return sessionStorage.getItem(AUTH_KEY) === '1'; } catch (e) { return false; } }
+function unlock(){ $('loginGate').style.display = 'none'; loadData(); }
+$('btnLogout').addEventListener('click', function(){
+  try { sessionStorage.removeItem(AUTH_KEY); } catch (e) {}
+  location.reload();
+});
+$('loginForm').addEventListener('submit', function(e){
+  e.preventDefault();
+  if ($('lu').value.trim() === 'admin' && $('lp').value === 'admin') {
+    try { sessionStorage.setItem(AUTH_KEY, '1'); } catch (x) {}
+    unlock();
+  } else {
+    $('loginErr').style.display = 'block';
+    $('lp').value = ''; $('lp').focus();
+  }
+});
+if (isAuthed()) { unlock(); } else { $('loginGate').style.display = 'flex'; $('lu').focus(); }
+
+})();
+</script>
+</body>
+</html>
